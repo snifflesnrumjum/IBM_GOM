@@ -16,15 +16,16 @@ Updated: Sat Feb. 9 2013
 
 
 import math
-import copy
+#import copy
 import netCDF4
 import numpy as np
-import time
+#import time
 import NODC_nitrate
 import pickle
 from numpy import array as np_array
 from numpy import isnan as np_isnan
-from scipy.stats.stats import nanmean
+#from scipy.stats.stats import nanmean
+from numpy import nanmean
 from scipy.ndimage import map_coordinates
 
 world_latitude = []
@@ -235,10 +236,11 @@ def PAR_data_MODIS(year, day, environ_PAR, origin_offset, initialize=False, worl
         initialize_MODIS_grid(environ_PAR.shape, origin_offset, world_shape)
     if reverse:
         temp_new_PAR = convert_MODIS_grid_to_KbrModel(MODIS_PAR_data[2][day-1], environ_PAR.shape)
-        environ_PAR = nanmean([environ_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR])
+        environ_PAR = nanmean([environ_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR], axis=0)
     else:
         temp_new_PAR = convert_MODIS_grid_to_KbrModel(MODIS_PAR_data[2][day], environ_PAR.shape)
-        environ_PAR = nanmean([environ_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR])
+        environ_PAR = nanmean([environ_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR, temp_new_PAR], axis=0)
+    print 'Environ_PAR:', environ_PAR.shape
     return environ_PAR
 
           
@@ -373,7 +375,7 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
     temp_u = new_data.variables['u'][0]
     temp_v = new_data.variables['v'][0]
     
-    temp_depths = new_data.variables['Depth'][:]
+    #temp_depths = new_data.variables['Depth'][:]
     temp_lats = new_data.variables['Latitude'][:]
     temp_lons = new_data.variables['Longitude'][:]
     temp_mld = new_data.variables['mixed_layer_depth'][0]
@@ -497,7 +499,7 @@ def update_environment_version3(world, year, day, hour, origin_offset, nitrate_s
         temp_u = new_data.variables['u'][0]
         temp_v = new_data.variables['v'][0]
         temp_mld = new_data.variables['mixed_layer_depth'][0]
-        temp_depths = new_data.variables['Depth'][:]
+        #temp_depths = new_data.variables['Depth'][:]
         temp_lats = new_data.variables['Latitude'][:]
         temp_lons = new_data.variables['Longitude'][:]
 ##        temp2_mld = []
@@ -871,7 +873,7 @@ def initialize_environment_version3_reverse(size_x_dimension, size_y_dimension, 
     temp_u = new_data.variables['u'][0]
     temp_v = new_data.variables['v'][0]
     
-    temp_depths = new_data.variables['Depth'][:]
+    #temp_depths = new_data.variables['Depth'][:]
     temp_lats = new_data.variables['Latitude'][:]
     temp_lons = new_data.variables['Longitude'][:]
     temp_mld = new_data.variables['mixed_layer_depth'][0]
@@ -994,7 +996,7 @@ def update_environment_version3_reverse(world, year, day, hour, origin_offset, n
         temp_u = new_data.variables['u'][0]
         temp_v = new_data.variables['v'][0]
         temp_mld = new_data.variables['mixed_layer_depth'][0]
-        temp_depths = new_data.variables['Depth'][:]
+        #temp_depths = new_data.variables['Depth'][:]
         #temp_lats = new_data.variables['Latitude'][:]
         #temp_lons = new_data.variables['Longitude'][:]
         temp_mld = np_array([temp_mld]*17)
@@ -1058,26 +1060,31 @@ def update_environment_version3_reverse(world, year, day, hour, origin_offset, n
 ##                temp_data = np.insert(temp_data, x, empty, 0)
 
 ##        #####starting nitrate placement; doing it here so that the nitrate values will be placed in the world before interpolation
-##        if nitrate_source == 'NODC':
-##            #print "Loading in nitrate concentrations from NODC data...",
-##            if hour == 0: #hard-coded to only update the nitrogen once per day
-##                nitrate_func = nitrate_from_NODC(day) #should return seven functions for depths 0, 10, 20, 30, 50, 75, 100
-##                #print "nitrate functions loaded"
-##                depths_nitrate = [0,10,20,30,50,75,100,125,150,200]
-##                for x in range(size_x_dimension):
-##                    for y in range(size_y_dimension):
-##                        for z in depths_nitrate:
-##                            if z < temp_max_depth:
-##                                if world_nitrate[z][y][x] < 1E6:
-##                                    temp_nitrate_value = 1.0 * (nitrate_func[depths_nitrate.index(z)](temp_lons[x+origin_offset[0]], temp_lats[y+origin_offset[1]])[0][0])
-##                                    if temp_nitrate_value < 0:
-##                                        temp_nitrate_value = 0.0
-##                                    elif temp_nitrate_value > 50:
-##                                        temp_nitrate_value = 50.0
-##                                    world_nitrate[z][y][x] = (world_nitrate[z][y][x] + temp_nitrate_value)/2.
-##                world_nitrate = update_nitrate_values_version2(world_nitrate, temp_max_depth)
-##            #print "Finished placing nitrate values"
-##        #####
+        if nitrate_source == 'NODC':
+            #print "Loading in nitrate concentrations from NODC data...",
+            if hour == 0: #hard-coded to only update the nitrogen once per day
+                nitrate_func = nitrate_from_NODC(day) #should return seven functions for depths 0, 10, 20, 30, 50, 75, 100
+                #print "nitrate functions loaded"
+                depths_nitrate = [0,10,20,30,50,75,100,125,150,200]
+                for x in range(size_x_dimension):
+                    for y in range(size_y_dimension):
+                        for z in depths_nitrate:
+                            if z < size_z_dimension:
+                                if world_nitrate[z][y][x] < 1E6:
+                                    temp_nitrate_value = 1.0 * (nitrate_func[depths_nitrate.index(z)](temp_lons[x+origin_offset[0]], temp_lats[y+origin_offset[1]])[0][0])
+                                    if temp_nitrate_value < 0:
+                                        temp_nitrate_value = 0.0
+                                    elif temp_nitrate_value > 50:
+                                        temp_nitrate_value = 50.0
+                                    world_nitrate[z][y][x] = (world_nitrate[z][y][x] + temp_nitrate_value) * 0.5
+                world_nitrate = update_nitrate_values_version2(world_nitrate, size_z_dimension)
+            #print "Finished placing nitrate values"
+        
+        if nitrate_source == 'uniform':
+            nitrate_concentrations(1, 'new', world)        
+            world_nitrate = world[2]
+        
+        #####
 ##        if len(temp_data) > size_z_dimension:
 ##            for x in range(len(temp_data)-1, size_z_dimension-1, -1):
 ##                temp_data = np.delete(temp_data, x, 0)

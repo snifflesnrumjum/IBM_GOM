@@ -3,7 +3,7 @@
 #trying to make a Kbrevis genotype growth and change model
 #import pyximport; pyximport.install()  #for cython use
 import random
-import matplotlib
+#import matplotlib
 #matplotlib.use('Agg') #turn this on if running remotely
 import pylab
 from pylab import contourf, contour
@@ -20,7 +20,7 @@ import time
 import copy
 import numpy
 import pp
-import netCDF4
+#import netCDF4
 import IBM_sample_information
 
 #6/15/09 - added a function that will make the first split equal so i can compare two different populations (1 vs 2)
@@ -58,16 +58,16 @@ predictive = False
 future_date = [2016, 252, 3]  #this will be used for predicting where cells will go based on forecast currents from HYCOM [year, julian day, hour]
 
 start_hour = 3     #this is the hour that the world data will load first
-start_day = 193    #this is the day that the world data will load first
-start_year = 2015   #this is the year that the world data will load first
+start_day = 120    #this is the day that the world data will load first
+start_year = 2013   #this is the year that the world data will load first
 
 current_hour = 3    #this is the hour the simulation will start on; should probably always be a 3
-current_day = 193   #this is the day the simulation will start on
-current_year = 2015 #this is the year the simulation will start on
+current_day = 120   #this is the day the simulation will start on
+current_year = 2013 #this is the year the simulation will start on
 
 environment_update_interval = [0,3,6,9,12,15,18,21] #make this a list with the hours from each day that I want to use to update the environment
 nitrate_source = 'uniform' #can be uniform or NODC
-run_forward_or_backward = 'forward'  #can be forward or backward
+run_forward_or_backward = 'backward'  #can be forward or backward
 cell_death = False
 cell_growth = False
 track_cell_locations = True
@@ -75,12 +75,12 @@ cell_loc_frequency = 1
 add_real_sample_data = True
 max_num_cells_per_sample = 500
 use_multiple_species = False
-species_to_model = ['Kbrevis']  #Kbrevis, Ptexanum, Pminimum, Dinophysis
+species_to_model = ['Ptexanum']  #Kbrevis, Ptexanum, Pminimum, Dinophysis
 init_azim = -60
 init_elev = 30
 
 
-length_of_run = 85
+length_of_run = 180
 simulation_time_interval = 180 #number of seconds in a time step for each day, probably best to keep it in multiples of 60; originally set to 180
 #give the x,y,z start location , how many cells at this location, and the concentration at this location;
 #multiple starts can be given, just give multiple lists
