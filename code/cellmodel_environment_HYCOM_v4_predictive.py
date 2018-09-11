@@ -14,7 +14,7 @@ Updated: Sat Feb. 9 2013
 
 #8/21/2013 - changed the number of cells variable to become the PAR data variable
 
-
+from __future__ import print_function
 import math
 #import copy
 import netCDF4
@@ -28,6 +28,10 @@ from numpy import isnan as np_isnan
 from numpy import nanmean
 from scipy.ndimage import map_coordinates
 
+
+
+
+
 world_latitude = []
 world_longitude = []
 HYCOM_depth_values = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 200]
@@ -36,11 +40,17 @@ MODIS_PAR_data = [0, 0, 0]  #will be year, day, data
 MODIS_PAR_grid_points = []
 ##filepath_HYCOM = '/home/darren/ibm_model/HYCOM_GOM_data_converted/'
 ##filepath_MODIS = '/home/darren/ibm_model/MODIS_PAR_data_converted/'
-filepath_HYCOM = 'D:/CJunk/HYCOM_GOM_data_converted/'
-filepath_HYCOM_future = 'D:/CJunk/HYCOM_GOM_data_future_converted/'
-filepath_MODIS = 'D:/CJunk/MODIS_PAR_data_converted/'
+#filepath_HYCOM = 'D:/CJunk/HYCOM_GOM_data_converted/'
+#filepath_HYCOM_future = 'D:/CJunk/HYCOM_GOM_data_future_converted/'
+#filepath_MODIS = 'D:/CJunk/MODIS_PAR_data_converted/'
 
-for indiv_depth in xrange(201):
+filepath_HYCOM = 'F:/HYCOM_GOM_data_converted/'
+filepath_HYCOM_future = 'F:/HYCOM_GOM_data_future_converted/'
+filepath_MODIS = 'F:/MODIS_PAR_data_converted/'
+
+print(filepath_HYCOM)
+
+for indiv_depth in range(201):
     valuetoadd = 1
     while indiv_depth >= HYCOM_depth_values[valuetoadd]:
         valuetoadd += 1
@@ -156,7 +166,7 @@ def initialize_MODIS_grid(environ_PAR_shape, origin_offset, world_shape):
     #this function will create a list of points mapping the world grid to the MODIS grid points; world grid points are integer and
     #the resulting MODIS grid point locations of those integers are floats
     global MODIS_PAR_grid_points
-    print "MODIS_PAR_grid_points initializing..."
+    print("MODIS_PAR_grid_points initializing...")
     PAR_data_grid_file = filepath_MODIS + 'MODIS_PAR_data_grid.pck'  #this is for running on campbell13
     #PAR_data_grid_file = 'D:/CJunk/MODIS_PAR_data_grid.pck'
     try:
@@ -178,7 +188,7 @@ def initialize_MODIS_grid(environ_PAR_shape, origin_offset, world_shape):
         grid_file = open(PAR_data_grid_file, 'w')
         pickle.dump(MODIS_PAR_grid_points, grid_file)
         grid_file.close()
-    print "MODIS_PAR before trimming:", len(MODIS_PAR_grid_points)
+    print("MODIS_PAR before trimming: {}".format(len(MODIS_PAR_grid_points)))
     #now trim the data points to the size of the model domain being used for this run
     keepers = []
 ##    print
@@ -195,7 +205,7 @@ def initialize_MODIS_grid(environ_PAR_shape, origin_offset, world_shape):
     MODIS_PAR_grid_points = keepers
 
         
-    print "Done!", "Length PAR grid:", len(MODIS_PAR_grid_points)
+    print("Done! Length PAR grid: {}".format(len(MODIS_PAR_grid_points)))
     
 def convert_MODIS_grid_to_KbrModel(new_data, environ_PAR_shape):   
     global MODIS_PAR_grid_points
@@ -271,6 +281,7 @@ def nitrate_concentrations(source, new_or_modify, world, mixed_layer_depth = Non
         #world[2] += ((-19.13*np.log(world[1])) + 68.952)*0.5  #calculated from the MS06 and MS07 cruises off LA using a logarithimic trendline in Excel
         #world[2][world[2] < 0] = background_value
         #world[2] *= 10 * (30. / world[0])**3 #scale according to temperature
+        #world[2] += ((28. / world[0])**5)-1 #scale according to temperature
         
         
         ##this uses the mixed_layer_depth to apportion nitrate in the water column
@@ -279,7 +290,7 @@ def nitrate_concentrations(source, new_or_modify, world, mixed_layer_depth = Non
         temp_nitrate = temp_tanh(temp_nitrate)
         temp_nitrate = (scale_factor *(-0.01*(-np.array(HYCOM_depth_values)) + (0.75*(1.01 + temp_nitrate))))  #was 0.1 as the first value
         world[2] += temp_nitrate.T
-        ###end of MLD 
+        ##end of MLD 
         
 #        world[2][world[4] < 51] += 0.05 #this adds a little extra nitrate for regions closer to shore
 #        world[2][world[4] < 41] += 0.1 #this adds a little extra nitrate for regions closer to shore
@@ -289,13 +300,15 @@ def nitrate_concentrations(source, new_or_modify, world, mixed_layer_depth = Non
 #        world[2][world[4] < 5]  += 2.0 #this adds a little extra nitrate for regions closer to shore
          
         #this one will have nitrate controlled by temp and salinity with temperature more dominant in deeper areas and salinity dominant in shallow areas
-        #gradients = [[0.2, 0.8], [0.4, 0.6], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3], [0.8, 0.2], [0.9, 0.1], [1,0]]
-        #for temp_depth, threshold_factor in zip([50, 40, 30, 25, 20, 15, 10, 5], gradients):
-        #    world[2][world[4] <= temp_depth] = background_value
-        #    world[2][world[4] <= temp_depth] += threshold_factor[0] * ((-19.13*np.log(world[1][world[4] <= temp_depth])) + 68.952)  #calculated from the MS06 and MS07 cruises off LA using a logarithimic trendline in Excel
-        #    world[2][world[2] <= 0] = background_value
-        #    world[2][world[4] <= temp_depth] += threshold_factor[1] * (0.05 * (30. / world[0][world[4] <= temp_depth])**3) #scale according to temperature
-        #world[2][world[4] > 51] += 0.05 * (30. / world[0][world[4] > 51])**3 #scale according to temperature
+#        gradients = [[0.2, 0.8], [0.4, 0.6], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3], [0.8, 0.2], [0.9, 0.1], [1,0]]
+#        for temp_depth, threshold_factor in zip([50, 40, 30, 25, 20, 15, 10, 5], gradients):
+#            world[2][world[4] <= temp_depth] = background_value
+#            world[2][world[4] <= temp_depth] += threshold_factor[0] * ((-19.13*np.log(world[1][world[4] <= temp_depth])) + 68.952)  #calculated from the MS06 and MS07 cruises off LA using a logarithimic trendline in Excel
+#            world[2][world[2] <= 0] = background_value
+#            world[2][world[4] <= temp_depth] += threshold_factor[1] * (0.05 * (30. / world[0][world[4] <= temp_depth])**3) #scale according to temperature
+#        #world[2][world[4] > 51] += 0.05 * (30. / world[0][world[4] > 51])**3 #scale according to temperature
+        
+        world[2][world[2] <= 0] = background_value
         
         
     elif new_or_modify == 'gradient_check':
@@ -368,7 +381,7 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
     global world_latitude, world_longitude, MODIS_PAR_grid_points
     HYCOM_depth_values = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 200]
     new_data = get_HYCOM_data(year, day, hour)
-    print "Initializing world..."
+    print("Initializing world...")
     
     temp_temp = new_data.variables['temperature'][0]
     temp_sal = new_data.variables['salinity'][0]
@@ -408,14 +421,14 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
     #begin creation of world by combining arrays, reordering axes, and adding in missing depth levels
     temp_world = np_array([temp_temp, temp_sal, zero_float, co2, zero_int1, temp_u, temp_v, temp_mld, zero_int2])
     temp_world = temp_world.T
-    print temp_world.shape
+    print(temp_world.shape)
     temp_world = np.rollaxis(temp_world, 2, 0) #move the depth (z-axis) to the front
-    print temp_world.shape
-    print "created the basic world framework"
+    print(temp_world.shape)
+    print("created the basic world framework")
     
     temp_world = np.rollaxis(temp_world, 2, 0)
     temp_world = np.rollaxis(temp_world, 2, 0)
-    print temp_world.shape
+    print(temp_world.shape)
     #end of world creation
 
     #begin world trimming to size and location requested
@@ -425,20 +438,20 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
         temp_world = np.rollaxis(temp_world, 1, 0)
         temp_world = temp_world[origin_offset[1]:size_y_dimension+origin_offset[1]]
         temp_world = np.rollaxis(temp_world, 1, 0)
-    print temp_world.shape
+    print(temp_world.shape)
 
     #####starting nitrate placement; doing it here so that the nitrate values will be placed in the world before interpolation
     if nitrate_source == 'uniform':
         #add in a nitrate value
-        print "Adding nitrate concentrations",
+        print("Adding nitrate concentrations", end='')
         nitrate_concentrations(1, 'new', temp_world.T)     #placed the nitrate gradient maker into a function so that the gradient can be modified in the middle of a run
         #temp_world = temp_world.T
-        print "Done!"
+        print("Done!")
         
     elif nitrate_source == 'NODC':
-        print "Loading in nitrate concentrations from NODC data...",
+        print("Loading in nitrate concentrations from NODC data...", end='')
         nitrate_func = nitrate_from_NODC(day) #should return seven functions for depths 0, 10, 20, 30, 50, 75, 100
-        print "nitrate functions loaded"
+        print("nitrate functions loaded")
         depths_nitrate = [0,10,20,30,50,75,100,125,150,200]
             
         for x in range(size_x_dimension):
@@ -453,7 +466,7 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
                                 temp_nitrate_value = 50.0
                             temp_world[x][y][z][2] = temp_nitrate_value
         temp_world = interpolate_nitrate_values_version2(temp_world, size_z_dimension)
-        print "Finished placing nitrate values"
+        print("Finished placing nitrate values")
     #####
     
     
@@ -477,7 +490,7 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
                     world[x][y][z][4] = maximum_depth_here
     ########
                     
-    print "Finished intializing"
+    print("Finished intializing")
     
     
     new_data.close()
@@ -486,7 +499,8 @@ def initialize_environment_version3(size_x_dimension, size_y_dimension, size_z_d
 
 def update_environment_version3(world, year, day, hour, origin_offset, nitrate_source, future_date=False, climate_change=False):
     #update the environmental parameters based on the time of day and date using HYCOM model data
-    #the data inside each parcel is : [temperature, salinity, nitrate, co2, max_depth, u, v, w_velocity, number of cells here]
+    #the data inside each parcel is : [temperature, salinity, nitrate, co2, max_depth, u, v, MLD depth, PAR]
+    
     if check_future(year, day, future_date):
         new_data = get_HYCOM_data(year, day, hour, True)
     else:
@@ -502,10 +516,6 @@ def update_environment_version3(world, year, day, hour, origin_offset, nitrate_s
         #temp_depths = new_data.variables['Depth'][:]
         temp_lats = new_data.variables['Latitude'][:]
         temp_lons = new_data.variables['Longitude'][:]
-##        temp2_mld = []
-##        for x in range(17):
-##            temp2_mld.append(temp_mld)
-##        temp_mld = np_array(temp2_mld)
         temp_mld = np_array([temp_mld]*17)
         #convert missing data
 ##        temp_temp[temp_temp > 1E7] = np.nan
@@ -527,6 +537,7 @@ def update_environment_version3(world, year, day, hour, origin_offset, nitrate_s
         
         
         #update the sunlight if necessary
+        
         if day != MODIS_PAR_data[1]:
             if check_future(year, day, future_date): #this will make the PAR the same value across the model domain
                 #what kind of skies do you want to simulate for the future (1500=65=sunny; 400=10=cloudy)
@@ -678,13 +689,13 @@ def interpolate_location_values_version3(world, locx, locy, locz):
         else:
             locations = [loc000, loc001, loc010, loc011, loc100, loc101, loc110, loc111]
     except:
-        print loc100, "    :    ", loc111
+        print(loc100, "    :    ", loc111)
         if world[loc100[0], loc100[1], loc100[2]][4] == 0 and world[loc111[0], loc111[1], loc111[2]][4] == 0:
             locations = [loc000, loc001, loc010, loc011, loc000, loc001, loc010, loc011]
         
    #check the locations to see if they exist
     #valid_locations = [False,False,False,False,False,False,False,False]
-    valid_locations = [not world[locations[indiv_loc][0], locations[indiv_loc][1], locations[indiv_loc][2]][0] < 1E7 for indiv_loc in xrange(8)]
+    valid_locations = [not world[locations[indiv_loc][0], locations[indiv_loc][1], locations[indiv_loc][2]][0] < 1E7 for indiv_loc in range(8)]
     #for indiv_loc in xrange(8):
     #    #temp_loc = world[locations[indiv_loc][0], locations[indiv_loc][1], locations[indiv_loc][2]]
     #    if not world[locations[indiv_loc][0], locations[indiv_loc][1], locations[indiv_loc][2]][0] < 1E7:
@@ -866,7 +877,7 @@ def initialize_environment_version3_reverse(size_x_dimension, size_y_dimension, 
     global world_latitude, world_longitude
     HYCOM_depth_values = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 200]
     new_data = get_HYCOM_data(year, day, hour)
-    print "Initializing world..."
+    print("Initializing world...")
     
     temp_temp = new_data.variables['temperature'][0]
     temp_sal = new_data.variables['salinity'][0]
@@ -914,14 +925,14 @@ def initialize_environment_version3_reverse(size_x_dimension, size_y_dimension, 
     #begin creation of world by combining arrays, reordering axes, and adding in missing depth levels
     temp_world = np_array([temp_temp, temp_sal, zero_float, co2, zero_int1, temp_u, temp_v, temp_mld, zero_int2])
     temp_world = temp_world.T
-    print temp_world.shape
+    print(temp_world.shape)
     temp_world = np.rollaxis(temp_world, 2, 0) #move the depth (z-axis) to the front
-    print temp_world.shape
-    print "created the basic world framework"
+    print(temp_world.shape)
+    print("created the basic world framework")
     
     temp_world = np.rollaxis(temp_world, 2, 0)
     temp_world = np.rollaxis(temp_world, 2, 0)
-    print temp_world.shape
+    print(temp_world.shape)
     #end of world creation
 
     #begin world trimming to size and location requested
@@ -931,7 +942,7 @@ def initialize_environment_version3_reverse(size_x_dimension, size_y_dimension, 
         temp_world = np.rollaxis(temp_world, 1, 0)
         temp_world = temp_world[origin_offset[1]:size_y_dimension+origin_offset[1]]
         temp_world = np.rollaxis(temp_world, 1, 0)
-    print temp_world.shape
+    print(temp_world.shape)
 
 ##    #####starting nitrate placement; doing it here so that the nitrate values will be placed in the world before interpolation
 ##    if nitrate_source == 'NODC':
@@ -956,9 +967,9 @@ def initialize_environment_version3_reverse(size_x_dimension, size_y_dimension, 
     
     if nitrate_source == 'uniform':
         #add in a nitrate value
-        print "Adding nitrate concentrations",
+        print("Adding nitrate concentrations", end='')
         nitrate_concentrations(1, 'new', temp_world)     #placed the nitrate gradient maker into a function so that the gradient can be modified in the middle of a run
-        print "Done!"
+        print("Done!")
     world = temp_world
     ######update max depth for each location
     #HYCOM_depth_values = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 200]
@@ -979,7 +990,7 @@ def initialize_environment_version3_reverse(size_x_dimension, size_y_dimension, 
                     world[x][y][z][4] = maximum_depth_here
     ########
                     
-    print "Finished intializing"
+    print("Finished intializing")
     
     new_data.close()
     return world
