@@ -158,17 +158,13 @@ class Kbrevis_bloom:
                 if current_hour in world_update_hours:
                     world = cellmodel_environment_HYCOM_v4_predictive.update_world(world, current_year, current_day, current_hour, origin_offset, nitrate_source, reverse, culture, future_date, climate_change=False)
                     
-##            if 5.96 < time_of_day < 18.0:    #check to see what time it is; if it's daytime, have the day_night variable indicate this
-##                day_night = 0
-##            else:
-##                day_night = 1
             day_night = None
             
             current_date = str(current_year) + '/' + self.what_month_is_it(current_year, current_day)
             for cell in self.cells:
                 
                 if 2.96 < time_of_day < 3.04:
-                    cell.liveordie(carrying_capacity, False)
+                    cell.liveordie(carrying_capacity, False, self.cell_death)
                 
                 if cell.cn <= 0:
                     continue
@@ -180,23 +176,15 @@ class Kbrevis_bloom:
                     temp_environ_info = cellmodel_environment_HYCOM_v4_predictive.interpolate_location_values_version3(world, orig_xloc, orig_yloc, orig_zloc)
                     environ_info = temp_environ_info[0][:5]
                     if True in numpy.isnan(environ_info):
-                        #print "first one"
-                        #print cell.cn, orig_xloc, orig_yloc, orig_zloc, '   ', environ_info
-                        break
                         cell.cn = 0
-                        #print orig_xloc, orig_yloc, orig_zloc, environ_info
                         continue
-                    #print "Actual:", temp_environ_info
-                    #print "Surface:", cellmodel_environment_HYCOM_v2.interpolate_location_values_version3(world, orig_xloc, orig_yloc, 0)
-                    #print
+                        
                 except:
                     temp_environ_info = cellmodel_environment_HYCOM_v4_predictive.interpolate_location_values_version3(world, orig_xloc, orig_yloc, orig_zloc)
-                    #print "hi"
                     cell.cn = 0
                     continue
                 environ_info = list(environ_info)
                 environ_info.extend([temp_environ_info[1], temp_environ_info[2]])
-                #environ_info.append(temp_environ_info[2])
                 environ_info.extend(list(temp_environ_info[0][5:]))
                 
                 cell.time_step_environment([time_of_day, day_night, cell_conc_above, orig_cell_conc, max_depth, max_light, environ_info], world_latitude, world_longitude, current_date, culture)
@@ -206,19 +194,15 @@ class Kbrevis_bloom:
                 
                 
                 if temp_xloc >= size_x_dimension:
-                    #cell.x = len(world)-0.1 
                     cellx_int = int(temp_xloc) - 1 
                 elif temp_xloc <= 0:
-                    #cell.x = 0.01
                     cellx_int = 0
                 else:
                     cellx_int = int(temp_xloc)
                     
                 if temp_yloc >= size_y_dimension:
-                    #cell.y = len(world[0])-0.1
                     celly_int = int(temp_yloc) - 1
                 elif temp_yloc <= 0:
-                    #cell.y = 0.01
                     celly_int = 0
                 else:
                     celly_int = int(temp_yloc)
@@ -299,18 +283,13 @@ class Kbrevis_bloom:
                         cell.cn = -9
                     elif cell.y <= 0:
                         cell.cn = -9                    
-                        #world[temp_xloc][temp_yloc][temp_zloc][8]-= 1
-                        #world[int(cell.x)][int(cell.y)][int(cell.z)][8]+=1
+                        
             if time_of_day2 % 100 == 0:
                 print time_of_day,
                 print round(temp_xloc, 3), round(temp_yloc, 3), round(temp_zloc, 3) #round(self.cells[0].cn, 3),
-                #print round(self.cells[-1].n, 3),  round(self.cells[-1].max_light_PAR_value, 3), round(self.cells[-1].e3, 3), round(self.cells[-1].hc, 3),
-                #print round(self.cells[-1].Ic, 3), round(self.cells[-1].Ih, 3), round(self.cells[-1].pm, 3), round(self.cells[-1].pmd, 3), round(self.cells[-1].A, 3), round(self.cells[-1].Q, 3), round(self.cells[-1].cnphoto, 3)
-                #data_outputfile = open('D:/CJunk/Kbr_Model_data/culture/single_cell_data.txt', 'a')
-                #data_outputfile.write(str([time_of_day, temp_zloc*-1, self.cells[0].cn, self.cells[-1].n, self.cells[-1].I, self.cells[-1].e3, self.cells[-1].hc, self.cells[-1].Ih])[:-1] + '\n')
-                #data_outputfile.close()
                 
             time_of_day += simulation_time_interval / 3600. #used to be 0.05
+        
         ######this section will run the liveordie code to determine which cells to remove or reproduce
         addcells = []
         remove_index = 0
@@ -339,6 +318,7 @@ class Kbrevis_bloom:
         self.cells.extend(addcells)
         print "New cells: ", len(addcells)
         #####################################end liveordie section
+        
         time4 = time.time()
         print "One day took: ", time4-time1
         return current_year, current_day, current_hour, world
@@ -372,10 +352,9 @@ class Kbrevis_bloom:
                     
             day_night = None
             current_date = str(current_year) + '/' + self.what_month_is_it(current_year, current_day)
-            #bloom_slice = [self.process_indiv_cell(cell, time_of_day, carrying_capacity) for cell in bloom_slice]
             for cell in bloom_slice:
                 if 2.96 < time_of_day < 3.04:
-                    cell.liveordie(carrying_capacity, False) 
+                    cell.liveordie(carrying_capacity, False, self.cell_death) 
                 if cell.cn <= 0:
                     continue
                 orig_xloc = cell.x
@@ -386,14 +365,12 @@ class Kbrevis_bloom:
                     environ_info = temp_environ_info[0][:5]
                     if True in numpy.isnan(environ_info):
                         cell.cn = 0
-                        #print orig_xloc, orig_yloc, orig_zloc, environ_info
                         continue
                 except:
                     cell.cn = 0
                     continue
                 environ_info = list(environ_info)
                 environ_info.extend([temp_environ_info[1], temp_environ_info[2]])
-                #environ_info.append(temp_environ_info[2])
                 environ_info.extend(list(temp_environ_info[0][5:]))
 
                 cell.time_step_environment([time_of_day, day_night, cell_conc_above, orig_cell_conc, max_depth, max_light, environ_info], world_latitude, world_longitude, current_date, culture)
@@ -403,19 +380,15 @@ class Kbrevis_bloom:
                 
                 
                 if temp_xloc >= size_x_dimension:
-                    #cell.x = len(world)-0.1 
                     cellx_int = int(temp_xloc) - 1
                 elif temp_xloc <= 0:
-                    #cell.x = 0.01
                     cellx_int = 0
                 else:
                     cellx_int = int(temp_xloc)
                     
                 if temp_yloc >= size_y_dimension:
-                    #cell.y = len(world[0])-0.1
                     celly_int = int(temp_yloc) - 1
                 elif temp_yloc <= 0:
-                    #cell.y = 0.01
                     celly_int = 0
                 else:
                     celly_int = int(temp_yloc)
@@ -498,13 +471,9 @@ class Kbrevis_bloom:
                     cell.cn = -9
                 elif cell.y <= 0:
                     cell.cn = -9                    
-                    #world[temp_xloc][temp_yloc][temp_zloc][8]-= 1
-                    #world[int(cell.x)][int(cell.y)][int(cell.z)][8]+=1
-            #if time_of_day2 % 200 == 0:
-                #print time_of_day,
-                #print temp_xloc, temp_yloc, temp_zloc,
-                #print cell_conc_above, current_day, current_hour    
+                      
             time_of_day += (simulation_time_interval / 3600.)
+        
         ######this section will run the liveordie code to determine which cells to remove or reproduce
         addcells = []
         remove_index = 0
@@ -532,13 +501,14 @@ class Kbrevis_bloom:
         bloom_slice.extend(addcells)
         print "New cells: ", len(addcells)
         #####################################end liveordie section
+        
         time4 = time.time()
         print "One day took: ", time4-time1
         return bloom_slice
     
     def process_indiv_cell(self, cell, time_of_day, carrying_capacity): #still needs work but might be a faster way to process cells
         if 2.96 < time_of_day < 3.04:
-            cell.liveordie(carrying_capacity, False) 
+            cell.liveordie(carrying_capacity, False, self.cell_death) 
         if cell.cn <= 0:
             pass
         else:
@@ -550,11 +520,10 @@ class Kbrevis_bloom:
                 environ_info = temp_environ_info[0][:5]
                 if True in numpy.isnan(environ_info):
                     cell.cn = 0
-                    #print orig_xloc, orig_yloc, orig_zloc, environ_info
-                    #continue
+                    
             except:
                 cell.cn = 0
-                #continue
+                
             environ_info = list(environ_info)
             environ_info.extend([temp_environ_info[1], temp_environ_info[2]])
             #environ_info.append(temp_environ_info[2])
@@ -694,16 +663,13 @@ class Kbrevis_bloom:
                         world = cellmodel_environment_HYCOM_v4_predictive.update_world(world, current_year, current_day-1, world_update_hours[current_hr_index], origin_offset, nitrate_source, reverse, culture)
                     else:
                         world = cellmodel_environment_HYCOM_v4_predictive.update_world(world, current_year, current_day, world_update_hours[current_hr_index], origin_offset, nitrate_source, reverse, culture)    
-##            if 5.96 < time_of_day < 18.0:    #check to see what time it is; if it's daytime, have the day_night variable indicate this
-##                day_night = 0
-##            else:
-##                day_night = 1
+##            
             day_night = None
             
             current_date = str(current_year) + '/' +  self.what_month_is_it(current_year, current_day)
             for cell in self.cells:
                 if 2.96 < time_of_day < 3.04:
-                    cell.liveordie(carrying_capacity, reverse) 
+                    cell.liveordie(carrying_capacity, reverse, self.cell_death) 
                 if cell.cn <= 0:
                     continue
                 orig_xloc = cell.x
@@ -714,21 +680,14 @@ class Kbrevis_bloom:
                     environ_info = temp_environ_info[0][:5]
                     if True in numpy.isnan(environ_info):
                         cell.cn = 0
-                        #print orig_xloc, orig_yloc, orig_zloc, environ_info
                         continue
-                    #if cell.cellid == 2:
-                        #print "Cell location:", orig_xloc, orig_yloc, orig_zloc
-                        #print "Actual:", temp_environ_info
-                        #print "Surface:", cellmodel_environment_HYCOM_v2.interpolate_location_values_version3(world, orig_xloc, orig_yloc, 0)
-                        #print
+                    
                 except:
                     cell.cn = 0
                     continue
                 environ_info = list(environ_info)
                 environ_info.extend([temp_environ_info[1], temp_environ_info[2]])
-                #environ_info.append(temp_environ_info[2])
                 environ_info.extend(list(temp_environ_info[0][5:]))
-                #environ_info should have [temperature, salinity, nitrate, co2, max_depth, no3_above, no3_below, u, v, mixed layer depth, number cells] 
                 cell.time_step_environment([time_of_day, day_night, cell_conc_above, orig_cell_conc, max_depth, max_light, environ_info], world_latitude, world_longitude, current_date, culture, True)
                 temp_xloc = cell.x
                 temp_yloc = cell.y
@@ -736,19 +695,15 @@ class Kbrevis_bloom:
                 
                 
                 if temp_xloc >= size_x_dimension:
-                    #cell.x = len(world)-0.1 
                     cellx_int = int(temp_xloc) - 1
                 elif temp_xloc <= 0:
-                    #cell.x = 0.01
                     cellx_int = 0
                 else:
                     cellx_int = int(temp_xloc)
                     
                 if temp_yloc >= size_y_dimension:
-                    #cell.y = len(world[0])-0.1
                     celly_int = int(temp_yloc) - 1
                 elif temp_yloc <= 0:
-                    #cell.y = 0.01
                     celly_int = 0
                 else:
                     celly_int = int(temp_yloc)
@@ -827,16 +782,13 @@ class Kbrevis_bloom:
                     cell.cn = -9
                 elif cell.y <= 0:
                     cell.cn = -9                    
-                    #world[temp_xloc][temp_yloc][temp_zloc][8]-= 1
-                    #world[int(cell.x)][int(cell.y)][int(cell.z)][8]+=1
-                #if cell.x == orig_xloc and cell.y == orig_yloc and cell.z == orig_zloc:
-                #    print orig_xloc, orig_yloc, orig_zloc, environ_info
+                    
             if time_of_day2 % 200 == 0:
                 print time_of_day,
-                #print temp_xloc, temp_yloc, temp_zloc, self.cells[-1].cn, self.cells[-1].n, self.cells[-1].noon, self.cells[-1].max_light_PAR_value
                 print '{:.5f} {:.5f} {:.5f} {:.5f} {:.5f} {:.5f} {:.5f}'.format(temp_xloc, temp_yloc, temp_zloc, self.cells[-1].cn, self.cells[-1].n, self.cells[-1].noon, self.cells[-1].max_light_PAR_value)
-                #print cell_conc_above, current_day, current_hour    
+                
             time_of_day -= (simulation_time_interval / 3600.)
+        
         ######this section will run the liveordie code to determine which cells to remove or reproduce
         addcells = []
         remove_index = 0
@@ -867,6 +819,7 @@ class Kbrevis_bloom:
         self.cells.extend(addcells)
         print "New cells: ", len(addcells)
         #####################################end liveordie section
+        
         time4 = time.time()
         print "One day took: ", time4-time1
         return current_year, current_day, current_hour, world
@@ -885,7 +838,6 @@ class Kbrevis_bloom:
         current_hour -= 1 #because the first time step below is going to increment the current hour up to 3
         temp_xloc, temp_yloc, temp_zloc = [-1, -1, -1] 
         for time_step in range(int(1440 / (simulation_time_interval / 60.))):
-            #time2 = time.time()        
             if time_of_day < 0.0:
                 time_of_day = 23.95
                 current_hour = 23
@@ -903,16 +855,13 @@ class Kbrevis_bloom:
                         world = cellmodel_environment_HYCOM_v4_predictive.update_world(world, current_year, current_day-1, world_update_hours[current_hr_index], origin_offset, nitrate_source, reverse, culture)
                     else:
                         world = cellmodel_environment_HYCOM_v4_predictive.update_world(world, current_year, current_day, world_update_hours[current_hr_index], origin_offset, nitrate_source, reverse, culture)    
-##            if 5.96 < time_of_day < 18.0:    #check to see what time it is; if it's daytime, have the day_night variable indicate this
-##                day_night = 0
-##            else:
-##                day_night = 1
+##            
             day_night = None
             
             current_date = str(current_year) + '/' + self.what_month_is_it(current_year, current_day)
             for cell in bloom_slice:
                 if 2.96 < time_of_day < 3.04:
-                    cell.liveordie(carrying_capacity, reverse) 
+                    cell.liveordie(carrying_capacity, reverse, self.cell_death) 
                 if cell.cn <= 0:
                     continue
                 orig_xloc = cell.x
@@ -923,14 +872,12 @@ class Kbrevis_bloom:
                     environ_info = temp_environ_info[0][:5]
                     if True in numpy.isnan(environ_info):
                         cell.cn = 0
-                        #print orig_xloc, orig_yloc, orig_zloc, environ_info
                         continue
                 except:
                     cell.cn = 0
                     continue
                 environ_info = list(environ_info)
                 environ_info.extend([temp_environ_info[1], temp_environ_info[2]])
-                #environ_info.append(temp_environ_info[2])
                 environ_info.extend(list(temp_environ_info[0][5:]))
 
                 cell.time_step_environment([time_of_day, day_night, cell_conc_above, orig_cell_conc, max_depth, max_light, environ_info], world_latitude, world_longitude, current_date, culture, True)
@@ -940,19 +887,15 @@ class Kbrevis_bloom:
                 
                 
                 if temp_xloc >= size_x_dimension:
-                    #cell.x = len(world)-0.1 
                     cellx_int = int(temp_xloc) - 1
                 elif temp_xloc <= 0:
-                    #cell.x = 0.01
                     cellx_int = 0                
                 else:
                     cellx_int = int(temp_xloc)
                     
                 if temp_yloc >= size_y_dimension:
-                    #cell.y = len(world[0])-0.1
                     celly_int = int(temp_yloc) - 1
                 elif temp_yloc <= 0:
-                    #cell.y = 0.01
                     celly_int = 0
                 else:
                     celly_int = int(temp_yloc)
@@ -1025,13 +968,9 @@ class Kbrevis_bloom:
                     cell.cn = -9
                 elif cell.y <= 0:
                     cell.cn = -9                    
-                    #world[temp_xloc][temp_yloc][temp_zloc][8]-= 1
-                    #world[int(cell.x)][int(cell.y)][int(cell.z)][8]+=1
-            #if time_of_day2 % 200 == 0:
-                #print time_of_day,
-                #print temp_xloc, temp_yloc, temp_zloc,
-                #print cell_conc_above, current_day, current_hour    
+                       
             time_of_day -= (simulation_time_interval / 3600.)
+        
         ######this section will run the liveordie code to determine which cells to remove or reproduce
         addcells = []
         remove_index = 0
@@ -1059,6 +998,7 @@ class Kbrevis_bloom:
         bloom_slice.extend(addcells)
         print "New cells: ", len(addcells)
         #####################################end liveordie section
+        
         time4 = time.time()
         print "One day took: ", time4-time1
         return bloom_slice
@@ -1283,13 +1223,16 @@ class Kbrevis_cell:
         self.cnhigh = (self.cnmax-self.cnmin)*0.6
         #division_rate calculation
         self.days_since_division = 0.01
-
+        self.num_times_divided = 0
+        
         #environmental characteristics/stressors
         self.correction_factor = information[36]    #0.75 for SP3; this will likely be different for every culture
-        self.salinity_preferred = information[37] #35. for SP3
+        #self.salinity_preferred = information[37] #35. for SP3
+        self.salinity_preferred = 35  #this is for Kbrevis 
         self.salinity_acclimated = information[32]
         self.salinity_stress_level = information[33]
-        self.temperature_preferred = information[38] #25. for SP3
+        #self.temperature_preferred = information[38] #25. for SP3
+        self.temperature_preferred = 25 #this is for Kbrevis
         self.temperature_acclimated = information[34]
         self.temperature_stress_level = information[35]
         self.temp_cn = 0
@@ -1322,7 +1265,6 @@ class Kbrevis_cell:
     def izt_func(self, time_of_day_temp, z, cell_conc_above, orig_cell_conc, I, salinity=None):  #trying to make the PAR intensity function from Lui et al 2001b
         #ek_range = self.ekrange_func(z, cell_conc_above, orig_cell_conc)  #used to have this as another function only called here so I moved here for performance
         ektotal = 0.0
-        #print time_of_day_temp,
         ###########old ek_range_function here
         ek0 = 0.1
         if self.max_depth_here < 200.:  #changed this to use the max depth to determine how close it is to the coast; coastal areas will have more sediment and more attenuation of light
@@ -1344,15 +1286,15 @@ class Kbrevis_cell:
 #            cell_conc_above = orig_cell_conc*xy*weight_of_each_cell
 #            cell_conc_above += weight_of_each_cell
 #            ektotal += ((ek0 + 0.054*((chla*cell_conc_above)**(0.6666666)) + 0.0088*(chla*cell_conc_above))) * 0.1
+        
         #trying the python integration function here:
         ektotal, ekerror = quad(self.izt_func_integration, 0, int(abs(z)*10), args=(orig_cell_conc, weight_of_each_cell, chla, ek0))
         ###########
+        
         if 0 <= time_of_day_temp < self.noon:
             time_of_day_temp += 24
         ek_range = ektotal
         
-        #if time_of_day_temp - (self.sunrise + self.noon) < 0:
-        #    time_of_day_temp = self.sunrise + self.noon
         if time_of_day_temp - (self.sunrise) == 0:
             time_of_day_temp = self.sunrise + 0.01
         
@@ -1366,7 +1308,6 @@ class Kbrevis_cell:
             izt = I
         elif izt < 0:
             izt = 0
-        #print 'izt:', izt, -ek_range
         return izt
 
 
@@ -1382,11 +1323,10 @@ class Kbrevis_cell:
         if I < Ic:
             dcnphoto_low = rm*(-1 + (I/A) + (1-(Ic/A))*math.exp(((A+1)/Ic)*(I-Ic)))  #units: pmol C;the change in net photosynthesis carbon; only used during daylight when PAR intensity is >= 0 but less than Ic
             dcnphoto = dcnphoto_low
-            #print "low", dcnphoto, I, Ic, time_of_day, pmd, Q
+            
         elif I >= Ic:
             dcnphoto_high = Q * math.tanh(e3) * (1.0 - math.exp((-I/Ik) * math.tanh(I-Ic)))   #units: pmol C; the change in net photosynthesis carbon; only used during daylight when PAR intensity (I) is >= the PAR compensation threshold (Ic)    
             dcnphoto = dcnphoto_high 
-            #print "high", dcnphoto
             self.Q = Q
             self.A = A
         return dcnphoto
@@ -1429,7 +1369,6 @@ class Kbrevis_cell:
         return hi
 
     def vn_func(self, kn, no3_conc, vmax):   #the governing equation for the internal cellular nitrogen
-        #no3z = float(self.no3_func(z, max_depth, cell_conc_above)) #old way; now i use the world
         no3z = no3_conc
         vn = ((vmax * (no3z / (kn + no3z)))  / 60.) * self.dt_minutes
     
@@ -1480,7 +1419,6 @@ class Kbrevis_cell:
                 vz = 0.25 * saccli * ((cnmax-cn)/(cnmax-cnmin)) #swim speed 6
             
         else:    
-        #elif swim_speed == 0:
             vz = 0 #swim speed 0
             
         return vz                                 
@@ -1549,7 +1487,6 @@ class Kbrevis_cell:
                         swim_orientation = -1
                         swim_speed = 4
             else:
-            #elif hc >= self.hc_threshold: #used to be 0.8 here
                 swim_orientation = -1
                 swim_speed = 2
         else:
@@ -1659,7 +1596,7 @@ class Kbrevis_cell:
         cell_conc_above = variables[2]
         orig_cell_conc = variables[3]
         max_depth = variables[4]
-        max_light = variables[5]
+        #max_light = variables[5]
         #may want to add a temperature/salinity variable here at some point to take into account differences under different conditions
         env_temperature = variables[6][0] #used to be just 6
         env_salinity = variables[6][1] #used to be just a 7
@@ -1699,11 +1636,6 @@ class Kbrevis_cell:
             self.td = self.noon * 2.  
         #indiv cell values above here, everything below here is either calculated from the above data or constant
         
-        #I = 0    
-##        if day_night == 1:      #change the I value according to whether it's day or night
-##            I = 0
-##        elif day_night == 0:    #full sun is reportedly 1500; we grow ours at 70 and the high light experiment was 140 (this is microeinsteins)
-##            I = max_light
         if self.sunrise <= time_of_day < self.sunset or (self.sunrise <= time_of_day and self.sunset < self.sunrise) or (time_of_day < self.sunset and self.sunset < self.sunrise): #this should turn the sun on when the current time is between sunrise and sunset
             if numpy.isnan(max_light_PAR):
                 I = 0#max_light
@@ -1714,7 +1646,6 @@ class Kbrevis_cell:
         else:
             I = 0
             day_night = 1
-        #print time_of_day, I, self.sunrise, self.sunset, '         ',
         if I == 0:
             izt = 0
         else:            
@@ -1722,21 +1653,11 @@ class Kbrevis_cell:
         self.I = izt
         self.e3 = self.ve3_func(self.e3, izt)
         
-##        if self.e3 < 0:
-##            self.e3 = 0
         self.Ih = self.ih_func(self.e3)
         self.Ik = self.e3
-        #self.hi = self.hi_func(izt, self.Ih)
         self.hc = self.hc_func(izt, self.Ih, self.hc)
         self.vmax = self.vmax_func(self.n)
-##        try:
-##            self.vmax = (5.46 * math.exp(-0.186 * self.n))
-##        except:
-##            print self.n
-##            self.vmax = (5.46 * math.exp(-0.186 * self.n))
-        #pm = pma + pmb * math.tanh((e3-a)/b)
         self.pm = self.pm_func(self.pma, self.pmb, self.e3, self.a, self.b)
-        #pmd = pm + pmc * math.sin(((t+fi) * math.pi) / td)  #units: pmol C h-1; the dark adapted production rate
         self.pmd = self.pmd_func(self.pm, self.pmc, time_of_day, self.fi, self.td)   #use this for field conditions; sun rising and setting
         
         #environmental stressors
@@ -1746,7 +1667,7 @@ class Kbrevis_cell:
         #internal carbon/nitrogen variables
         if day_night == 0:
             self.cnphoto = self.dcnphoto_func(izt, self.Ic, self.Ik, self.pmd, self.pl, self.hc, self.e3, time_of_day, self.pma, self.pmb, self.pmc, self.a, self.b, self.t, self.fi, self.td, self.rm, self.Ih, self.pm)
-        else: #if day_night == 1:
+        else: 
             self.cnphoto = 0
         temp_n = self.vn_func(self.kn, no3_conc, self.vmax)  #returns pmol/3min; no3_conc is in micromolar units
         #this is the original stress function
@@ -1755,50 +1676,40 @@ class Kbrevis_cell:
                              (math.exp(-((env_temperature-self.temperature_preferred)**2)*0.006666666))*
                              self.correction_factor)
         
-        #print "temp_n:", temp_n, self.vmax, no3_conc
         if not reverse_run:
             if (no3_conc*(1E6)) >= temp_n:
                 self.n += temp_n #self.vn_func(self.z, self.kn, self.n, max_depth, cell_conc_above)
-                #no3_conc = ((no3_conc*(1E6))-temp_n)*(1E-6)
+                
             else:
                 self.n += (no3_conc * (1E6))
-                #no3_conc = 0.0
+                
         else:
             if (no3_conc*(1E6)) >= temp_n:
                 self.n -= temp_n #self.vn_func(self.z, self.kn, self.n, max_depth, cell_conc_above)
-                #no3_conc = ((no3_conc*(1E6))-temp_n)*(1E-6)
+                
             else:
                 self.n -= (no3_conc * (1E6))
-                #no3_conc = 0.0
+                
             if self.n < 5:
-            #    self.cn = 10
                 self.n = 20
-        #self.cnprotein = self.dcnprotein_func(self.kq, self.n, self.vmax)  #units returned are pmols*N/cell*h
-        dcnprotein = 0.814 * self.vmax * (1 - (self.kq / (0.869*self.n)))
+        dcnprotein = 0.814 * self.vmax * (1 - (self.kq / (0.869*self.n))) #units returned are pmols*N/cell*h
         if dcnprotein < 0:
             dcnprotein = 0
         self.cnprotein = dcnprotein
-        #self.cn += self.vcn_func(day_night, self.cnphoto, self.cnprotein, self.rm) *
-        #            (1 - self.salinity_stress_level * (abs(self.salinity_acclimated-self.salinity_preferred)/self.salinity_preferred)) *
-        #            (1 - self.temperature_stress_level * (abs(self.temperature_acclimated-self.temperature_preferred)/self.temperature_preferred))
-
         
         if day_night == 0:
             vcn = ((self.cnphoto - dcnprotein) / 60.) * self.dt_minutes #/ 20.  #light
         else:
             vcn = ((-self.rm - dcnprotein) / 60.) * self.dt_minutes #/ 20.       #dark
         
-        #self.temp_cn = self.vcn_func(day_night, self.cnphoto, self.cnprotein, self.rm)
-
+        
         if vcn > 0:
-            #self.temp_cn = vcn * ((1 - (0.02*self.salinity_stress_level)) * (1 - (0.02*self.temperature_stress_level))*
             self.temp_cn = vcn * (
                              (math.exp(-((env_salinity-self.salinity_preferred)**2)*0.02))*   #was 0.006666666 here instead of 0.02
                              (math.exp(-((env_temperature-self.temperature_preferred)**2)*0.02))*
                              self.correction_factor)
         else:
             self.temp_cn = vcn
-        #self.temp_cn = vcn   
                                 
         if not reverse_run:
             self.cn += self.temp_cn
@@ -1813,19 +1724,14 @@ class Kbrevis_cell:
         if self.n > self.nmax:
             self.n = self.nmax
         
-        #if np_isnan(self.salinity_stress_level) or np_isnan(self.temperature_stress_level) or np_isnan(self.salinity_preferred) or np_isnan(self.temperature_preferred):
-        #    self.cn = 0
-        #swimming orientation/speed variables
-        
         if self.type == 'dinoflagellate':
             saccli = self.saccli_func(self.s250, izt)
             self.vz = self.swimming_velocity(1, I, self.cn, self.z, self.n, day_night, time_of_day, izt, self.hc, self.cnhigh, self.kn, self.cnmax, self.cnmin, self.nmax, self.nmin, max_depth, cell_conc_above, no3_conc, no3_conc_above, no3_conc_below, saccli)
-            #if self.vz < 0:  #this line is used for the 'swim down only' simulation runs
-            #    self.vz = 0
             if not reverse_run:
                 self.z += (self.vz / 60.) * self.dt_minutes #((self.vz / 60.) *3)
             else:
                 self.z += (self.vz / 60.) * self.dt_minutes #((self.vz / 60.) *3)
+            
         elif self.type == 'diatom':
             if not reverse_run:
                 if self.z >= -mixed_layer_depth:
@@ -1848,15 +1754,13 @@ class Kbrevis_cell:
             #self.x += (u_vel*180)*0.00025 #/4000. #incoming value is in m/s and my time steps are 3 min (180 sec.); resolution of model data is ~3.5-4km 
             self.swim_y_direction(v_vel)
             #self.y += (v_vel*180)*0.00025 #/4000.  #incoming value is in m/s and my time steps are 3 min; resolution of model data is ~3.5-4km    
-        #resources_used = copy.deepcopy([env_temperature, env_salinity, no3_conc, co2_conc, number_of_cells_here])
         resources_used = [env_temperature*1.0, env_salinity*1.0, no3_conc*1.0, co2_conc*1.0, 1]
         
         self.z *= -1
         
-        #print self.cn, self.n, vcn, self.cnphoto, dcnprotein, self.e3, izt, time_of_day
         return resources_used
 
-    def liveordie(self, carrying_capacity, reverse_run):
+    def liveordie(self, carrying_capacity, reverse_run, cell_death):
         
         cellliveordie = random.random()
         if self.same_location >= 100:
@@ -1867,18 +1771,29 @@ class Kbrevis_cell:
             self.cn = -1
         elif self.cn > (self.cnmax*self.c_divide_threshold) and self.n > (self.nmax*self.n_divide_threshold):# and cell.divide == 1:# and replicatecell < 1.9999:
             self.divide = True
+            self.num_times_divided += 1
             self.cn -= self.cnmin
             self.n -= self.nmin
             self.growthrate = 1./self.days_since_division
             self.days_since_division = 0.01
+        
+        if self.num_times_divided == 6:  #this will kill off cells that have divided six times (from Alexandrium work, need to get ref)
+            self.cn = -1
         
         if reverse_run:
             if self.cn < self.cnmin:
                 self.cn = self.cnmax
             if self.n < self.nmin:
                 self.n = self.nmax
+        elif not cell_death:
+            if self.cn < self.cnmin:
+                self.cn = self.cnmax * 0.9
+            if self.n < self.nmin:
+                self.n = self.nmax * 0.9
         
         return
+    
+    
 ##################################################### below here are old designations and program stuff, use for reference
 #variable declaration begins below here
 #cell_id = cellid        #a unique value to define this cell for later divisions and keeping track of it
@@ -1935,7 +1850,6 @@ class Kbrevis_cell:
 
 
 class Dinophysis_cell(Kbrevis_cell):
-    #print "UhOh!"
     def myself(self):
         self.species = 'Dinophysis'
         self.type = 'dinoflagellate'
@@ -1947,7 +1861,7 @@ class Dinophysis_cell(Kbrevis_cell):
         self.cnmin = 27.8
         self.nmax = 20.17
         self.nmin = 6.05
-        self.s250 = 0.6  #m/s
+        self.s250 = 0.6  #m/h
         self.kn = 3.0            
         self.kq = 7.57          
         self.no3z_threshold = 2.0 #Kbrevis has a lower Kn (Ks) value and is more sensitive to NO3; Pmin is less sensitive so the concentration to control swimming should be higher right?
@@ -1959,19 +1873,22 @@ class Ptexanum_cell(Kbrevis_cell):
         self.species = 'Ptexanum'
         self.type = 'dinoflagellate'
         self.species_number = 2
-        self.pl = 0.798  #0.798
-        self.rm = 0.42
-        self.Ic = 5.0
-        self.cnmax = 92.8
+        self.pl = 0.798  #light_adapted production rate; 
+        self.rm = 0.42 #dark respiration rate in pmol C/cell/h ; Pmicans respires ~52% of C fixed from Falkowski, Dub, Wy 1985
+        self.Ic = 17.0 #PAR compensation threshold; for Pmicans from Falkowski, Dubinsky, Wyman 1985 - Gwth-irrad relat in phytoplankton
+        self.cnmax = 92.8 #maximum C/cell in picomoles; can range from 88-98 per Falkowski, Dub, Wy 1985
         self.cnmin = 27.8 #(~30% of the cnmax; this was just an estimate made by me)
         self.nmax = 20.17 #(based on the 4.6 C:N ratio given by Falkowski et al 1985)
         self.nmin = 6.05 #(~30% of the nmax; just an estimate made by me)
-        self.s250 = 0.50 #m/s; maximum swim speed at light intensity of 250um
-        self.kn = 0.42
+        self.s250 = 0.50 #m/h; maximum swim speed at light intensity of 250um; avg migration speed is 0.36+-0.14m/h for Pmicans from Kamykowski 1981 - Migrations through Temp Gradients
+                         #the swim speed can range from 0.45-0.63 m/h based on temperature from Kamykowski and McCollum 1986
+        self.kn = 5.0 #half-saturation constant for nitrate from Pminimum in Glibert et al 2012 Harmful Algae 14 (231-259)
         self.kq = 7.57
         self.no3z_threshold = 1.0
-        self.chlorophyll_content = 0.0000000000425
-    
+        self.chlorophyll_content = 0.0000000000237 # value for Pmicans from Kamykowski 1981 - Migrations through Temp Gradients
+        self.salinity_preferred = 30
+        self.temperature_preferred = 20
+        
 class Pminimum_cell(Kbrevis_cell):
 
     def myself(self):
@@ -1985,11 +1902,12 @@ class Pminimum_cell(Kbrevis_cell):
         self.cnmin = 3.75
         self.nmax = 6.52
         self.nmin = 1.95
-        self.s250 = 0.38  #m/s
+        self.s250 = 0.38  #m/h
         self.kn = 5.0            
         self.kq = 2.44          
         self.no3z_threshold = 3.0 #Kbrevis has a lower Kn (Ks) value and is more sensitive to NO3; Pmin is less sensitive so the concentration to control swimming should be higher right?
-                
+        self.chlorophyll_content = 0.0000000000237 # value for Pmicans from Kamykowski 1981 - Migrations through Temp Gradients
+            
                 
       
 class Asterionellopsis_cell(Kbrevis_cell):
@@ -2008,12 +1926,13 @@ class Asterionellopsis_cell(Kbrevis_cell):
         self.cnmin = 15.0
         self.nmax = 10.0 # 
         self.nmin = 2.0
-        self.s250 = 0.0  #m/s
+        self.s250 = 0.0  #m/h
         self.chlorophyll_content = 49.7E-12 #pg chlA in a cell per Chan 1980 for Thalassiosira eccentrica; it's only 0.98 for Cylindrotheca fusiformis; and 42.5 for Kbrevis (Liu et al 2001)
         self.kn = 1.6   #1.6 per Sarthou et al 2005     
         self.kq = 2.44          
         self.no3z_threshold = 1.0 #Kbrevis has a lower Kn (Ks) value and is more sensitive to NO3; Pmin is less sensitive so the concentration to control swimming should be higher right?
         self.correction_factor = 1.0
+        
     def vmax_func(self, n):
         vmax = (7.0 * math.exp(-0.186 * n)) #5.46 for Kbrevis
         return vmax
@@ -2034,7 +1953,7 @@ class Thalassionema_cell(Kbrevis_cell):
         self.cnmin = 15.0
         self.nmax = 10.0 # 
         self.nmin = 2.0
-        self.s250 = 0.0  #m/s
+        self.s250 = 0.0  #m/h
         self.chlorophyll_content = 49.7E-12 #pg chlA in a cell per Chan 1980 for Thalassiosira eccentrica; it's only 0.98 for Cylindrotheca fusiformis; and 42.5 for Kbrevis (Liu et al 2001)
         self.kn = 1.6   #1.6 per Sarthou et al 2005     
         self.kq = 2.44          

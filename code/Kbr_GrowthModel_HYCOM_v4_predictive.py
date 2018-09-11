@@ -1,27 +1,13 @@
-#import sys
-#sys.path.append('/home/snifflesnrumjum/Python27/')
-#trying to make a Kbrevis genotype growth and change model
-#import pyximport; pyximport.install()  #for cython use
 import random
-#import matplotlib
-#matplotlib.use('Agg') #turn this on if running remotely
 import pylab
 from pylab import contourf, contour
-from mpl_toolkits.mplot3d import Axes3D
-#import Kbr_Popgen_Model
-#import Kbr_Arlequin_Model2 as Kbr_Arlequin_Model
-#import Kbr_Genepop
-#import Kbr_Structure
-#import cellmodel_bloom_cell_class
 import cellmodel_fieldbloom_envir_HYCOM_v4_multispp as cellmodel_bloom_cell_class
-#import cellmodel_bloom_cell_class_7_19_10 as cellmodel_bloom_cell_class
 import cellmodel_environment_HYCOM_v4_predictive as cellmodel_environment
 import time
 import copy
 import numpy
 import pp
-#import netCDF4
-import IBM_sample_information
+import IBM_sample_information_NOAA
 
 #6/15/09 - added a function that will make the first split equal so i can compare two different populations (1 vs 2)
 #        - also made it 20 blooms total and added a size of each bloom output for each day and a popgen output for every 5th day
@@ -51,31 +37,31 @@ migration = False
 migration_rate = 0.001
 skew_freqs = False                    
 skewlevel = 4
-max_pop_size = 30000
+max_pop_size = 100000000
 
 mutation_rate_cell_properties = 0.05
 predictive = False 
 future_date = [2016, 252, 3]  #this will be used for predicting where cells will go based on forecast currents from HYCOM [year, julian day, hour]
 
 start_hour = 3     #this is the hour that the world data will load first
-start_day = 110    #this is the day that the world data will load first
-start_year = 2012   #this is the year that the world data will load first
+start_day = 182    #this is the day that the world data will load first
+start_year = 2011   #this is the year that the world data will load first
 
 current_hour = 3    #this is the hour the simulation will start on; should probably always be a 3
-current_day = 110   #this is the day the simulation will start on
-current_year = 2012 #this is the year the simulation will start on
+current_day = 182   #this is the day the simulation will start on
+current_year = 2011 #this is the year the simulation will start on
 
 environment_update_interval = [0,3,6,9,12,15,18,21] #make this a list with the hours from each day that I want to use to update the environment
 nitrate_source = 'uniform' #can be uniform or NODC
-run_forward_or_backward = 'backward'  #can be forward or backward
+run_forward_or_backward = 'forward'  #can be forward or backward
 cell_death = False
-cell_growth = False
+cell_growth = True
 track_cell_locations = True
 cell_loc_frequency = 1
-add_real_sample_data = True
+add_real_sample_data = False
 max_num_cells_per_sample = 500
 use_multiple_species = False
-species_to_model = ['Ptexanum']  #Kbrevis, Ptexanum, Pminimum, Dinophysis
+species_to_model = ['Karenia']  #Kbrevis, Ptexanum, Pminimum, Dinophysis
 init_azim = -60
 init_elev = 30
 
@@ -85,26 +71,9 @@ simulation_time_interval = 180 #number of seconds in a time step for each day, p
 #give the x,y,z start location , how many cells at this location, and the concentration at this location;
 #multiple starts can be given, just give multiple lists
 start_locations_and_concentrations = []
-##manual_start_locs = [[50,52,6], [54,58,6], [60,58,6], [64,60,6], [64,94,6], [66,60,6], [68,92,6],
-##                     [76,88,6], [84,50,6], [84,98,6], [86,58,6], [98,66,6], [104,56,6], [104,82,6],
-##                     [110,68,6], [116,84,6], [116,86,6], [122,102,6], [126,78,6], [146,90,6],[148,50,6],
-##                     [52,50,6], [56,50,6], [64,58,6], [80,88,6], [98,64,6], [108,56,6], [108,114,6],
-##                     [116,74,6], [124,72,6], [128,62,6], [142,64,6], [148,132,6]]
-##for manual_loc in manual_start_locs:
-##    start_locations_and_concentrations.append(manual_loc)
-##    start_locations_and_concentrations[-1].append(1)
-##for x in range(275, 300, 50):
-##    for y in range(10, 20, 50):
-##        for z in range(0, 8, 8):
-##            start_locations_and_concentrations.append([x, y, z, 1, 2])
-#for x in range(50, 150, 3):
-#    for y in range(50, 150, 3):
-#        for z in range(0, 8, 5):
-#            start_locations_and_concentrations.append([x, y, z, 1, 0])
-
 #for x in range(150, 250, 5):
 #    for y in range(275, 310, 5):
-#        for z in range(0, 3, 2):
+#        for z in range(10, 60, 5):
 #            start_locations_and_concentrations.append([x, y, z, 1, 2])
 
 
@@ -147,16 +116,11 @@ if use_threads:
 import warnings
 warnings.filterwarnings(action='ignore', message= '.*less.*', category=RuntimeWarning)
 warnings.filterwarnings(action='ignore', message= '.*greater.*', category=RuntimeWarning)
-
-
-
 ######
 
 #trying a new way where the locations are given as lat/lon with concentration and the function in the world library converts it to integers
-extra_bloom_dates = IBM_sample_information.extra_bloom_dates
-
+extra_bloom_dates = IBM_sample_information_NOAA.extra_bloom_dates
 cell_id_number = 1
-
 
 ######variables for plotting cells and environmental info
 cell_concs_time = [0]
@@ -924,13 +888,13 @@ def make_figure2(cell_concs, temper, salin, nitrate, ssh, scatter_locs, PAR_img,
     
     
     
-    output_figure = contourf(salin[0], numpy.arange(10, 51, 0.25))
+    output_figure = contourf(salin[0], numpy.arange(10, 41, 0.25))
     pylab.colorbar(ticks=range(10, 51, 5))
     pylab.title(''.join(['Salinity ', namestr, ' 0m']), size=20)
     pylab.savefig(''.join([bloommodelpath, 'salinity', namestr, '.png']), dpi = 150)
     pylab.clf()
     
-    output_figure = contourf(temper[0], numpy.arange(5, 40.25, 0.25))
+    output_figure = contourf(temper[0], numpy.arange(5, 35.25, 0.25))
     pylab.colorbar(ticks=range(5, 41, 5))
     pylab.title(''.join(['Temperature ', namestr, ' 0m']), size=20)
     pylab.savefig(''.join([bloommodelpath, 'temperature', namestr, '.png']), dpi = 150)
@@ -965,7 +929,7 @@ def make_figure2(cell_concs, temper, salin, nitrate, ssh, scatter_locs, PAR_img,
         pylab.clf()
 
     for depthrange in range(5):
-        output_figure = contourf(nitrate[depthrange], numpy.arange(0.0, 15.01, 0.05))
+        output_figure = contourf(nitrate[depthrange], numpy.arange(0.0, 10.05, 0.05))
         pylab.colorbar()
         pylab.title(''.join(['Nitrate concen ', namestr, ' ', str(HYCOM_depth_values[depthrange]), 'm']), size=20)
         pylab.savefig(''.join([bloommodelpath, 'nitrate', namestr, '_', str(HYCOM_depth_values[depthrange]), 'm.png']), dpi = 200)
@@ -1053,7 +1017,8 @@ def make_figure3(cell_concs, temper, salin, nitrate, ssh, scatter_locs, PAR_img,
         depth_locs_pos = depth_locs * -1
         if len(temp_data[species_plot][0]) > 0:
             pylab.scatter(depth_locs_pos, temp_data[species_plot][1], c=temp_data[species_plot][3], s=20, alpha=0.4, edgecolor = '')
-    pylab.xticks(range(0, (max_depth*-1)+1, 10), [str(xtic) for xtic in range(0, -51, -10)], size=5)
+    #pylab.xticks(range(0, (max_depth*-1)+1, 10), [str(xtic) for xtic in range(0, -51, -10)], size=5)
+    pylab.xticks(size=5)
     pylab.yticks(size=5)
     
 #    output_figure = overall_figure.add_subplot(235)
@@ -1423,9 +1388,9 @@ def main():
                 temp_bloom = []
                 
                 for x1 in range(len(bloom_slices)):
-                
-                    for y1 in range(len(bloom_slices[x1])):
-                       temp_bloom.append(bloom_slices[x1][y1])
+                    if len(bloom_slices[x1]) > 0:
+                        for y1 in range(len(bloom_slices[x1])):
+                           temp_bloom.append(bloom_slices[x1][y1])
                 field_blooms[y].cells = copy.deepcopy(temp_bloom)
                 world = cellmodel_environment.update_world(world, current_year, current_day, 0, environ_origin_offset, nitrate_source, 'forward', culture, future_date, climate_change=False)
                 print "One day took:", time.time()-time1
